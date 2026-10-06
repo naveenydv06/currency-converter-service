@@ -1,0 +1,10 @@
+# Non-sensitive runtime settings consumed by the Express container.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: currency-converter-config
+  namespace: currency-converter
+data:
+  PORT: "3000"
+  RATES_API_URL: "https://open.er-api.com/v6/latest/USD"
+  RATES_CACHE_TTL_MS: "3600000"

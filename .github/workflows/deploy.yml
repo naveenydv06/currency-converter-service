@@ -1,0 +1,98 @@
+name: CICD PIPELINE
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+    compile:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Get Code
+              uses: actions/checkout@v4
+
+            - name: Set Up NodeJs
+              uses: actions/setup-node@v7
+              with:
+                node-version: '26'
+                cache: 'npm'
+            
+            - name: Install Dependencies
+              run: npm ci
+
+    security-syntax-check:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Check Syntax
+            run: |
+              node --check backend/server.js
+              node --check frontend/app.js
+
+          - name: Trivy Installation
+            run: |
+              sudo apt-get install wget gnupg
+              wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+              echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+              sudo apt-get update
+              sudo apt-get install trivy
+        
+          - name: Trivy FS Scan
+            run: tricy fs --format table -o fs-report.json .
+
+          - name: Gitleaks Installation
+            run: sudo apt insatll gitleaks -y
+
+          - name: Gitleaks Code Scan
+            run: gitleaks detect source . -r gitleaks-report.json -f json
+
+    Build & Deploy to EKS:
+    env:
+      AWS_REGION: <us-east-1>
+     ECR_REPOSITORY: <currency-converter-repo>
+    EKS_CLUSTER: currency-converter-app
+    K8S_NAMESPACE: currency-converter-app
+
+    permissions:
+      id-token: write   # required to request the OIDC token
+      contents: read
+      runs-on: ubuntu-latest
+      steps:
+       - name: Checkout code
+         uses: actions/checkout@v4
+
+       - name: Configure AWS credentials via OIDC
+         uses: aws-actions/configure-aws-credentials@v4
+         with:
+           role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/github-actions-eks-deploy
+           aws-region: ${{ env.AWS_REGION }}
+
+       - name: Login to Amazon ECR
+         id: ecr-login
+         uses: aws-actions/amazon-ecr-login@v2
+
+       - name: Build, tag, and push image
+         id: build
+         env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+         run: |
+          docker build -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+       - name: Update kubeconfig
+         run: |
+          aws eks update-kubeconfig \
+            --name $EKS_CLUSTER \
+            --region $AWS_REGION
+
+       - name: Deploy to EKS
+         run: |
+          kubectl set image deployment/currency-converter \
+            my-app=${{ steps.build.outputs.image }} \
+            -n $K8S_NAMESPACE
+          kubectl rollout status deployment/currency-converter \
+            -n $K8S_NAMESPACE --timeout=180s
+
+        

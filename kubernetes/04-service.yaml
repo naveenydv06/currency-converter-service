@@ -1,0 +1,17 @@
+# EKS Auto Mode provisions an internet-facing Network Load Balancer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency-converter
+  namespace: currency-converter
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+spec:
+  type: LoadBalancer
+  loadBalancerClass: eks.amazonaws.com/nlb
+  selector:
+    app: currency-converter
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Currency Converter</title><meta name="description" content="Fast, clear currency conversion.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="card" aria-labelledby="page-title">
+      <div class="eyebrow">LIVE EXCHANGE RATES</div>
+      <h1 id="page-title">Currency Converter</h1>
+      <p class="lede">Convert between world currencies in a moment.</p>
+      <form id="converter" novalidate>
+        <label for="amount">Amount</label>
+        <input id="amount" type="number" min="0" step="any" value="1" inputmode="decimal" required>
+        <div class="currencies">
+          <div><label for="from">From</label><select id="from" required></select></div>
+          <button id="swap" class="swap" type="button" aria-label="Swap currencies" title="Swap currencies">⇄</button>
+          <div><label for="to">To</label><select id="to" required></select></div>
+        </div>
+        <button class="convert" type="submit">Convert</button>
+      </form>
+      <div id="result" class="result" aria-live="polite"><span>Enter an amount to convert</span></div>
+      <p id="status" class="status">Loading currency list…</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

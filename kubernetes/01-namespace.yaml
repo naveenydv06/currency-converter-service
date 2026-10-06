@@ -1,0 +1,5 @@
+# Creates an isolated namespace for this application.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: currency-converter

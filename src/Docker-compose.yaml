@@ -1,0 +1,11 @@
+name: currencyconverter
+
+services:
+  currency-converter:
+    image: currencyconverter-api:${APP_VERSION:-v1.0.0}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"

@@ -1,0 +1,52 @@
+# Two replicas serve both the frontend and API from one container image.
+# Replace ACCOUNT_ID and REGION after pushing the image to Amazon ECR.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency-converter
+  namespace: currency-converter
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: currency-converter
+  template:
+    metadata:
+      labels:
+        app: currency-converter
+    spec:
+      containers:
+        - name: currency-converter
+          image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/currencyconverter-api:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: currency-converter-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
