@@ -204,11 +204,20 @@ jobs:
       # --------------------------------------------------------
       # Deploy to EKS
       # --------------------------------------------------------
-
+      
       - name: Deploy to EKS
+        env:
+          IMAGE: ${{ steps.build.outputs.image }}
         run: |
+          set -euo pipefail
+
+          kubectl create namespace "$K8S_NAMESPACE" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f kubernetes/ -n "$K8S_NAMESPACE"
+
           kubectl set image deployment/currency-converter \
-            my-app=${{ steps.build.outputs.image }} \
+            "my-app=$IMAGE" \
             -n "$K8S_NAMESPACE"
 
           kubectl rollout status deployment/currency-converter \
