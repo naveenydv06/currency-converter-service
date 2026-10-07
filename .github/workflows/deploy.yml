@@ -184,7 +184,7 @@ jobs:
           docker build \
             -f src/backend/Dockerfile \
             -t "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
-            ./src/backend
+            ./src
 
           docker push \
             "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
