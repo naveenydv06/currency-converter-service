@@ -143,7 +143,10 @@ jobs:
           aws-region: us-east-1
           audience: sts.amazonaws.com
 
-      # --------------------------------------------------------
+      - name: Verify AWS authentication
+        run: aws sts get-caller-identity
+      
+        # --------------------------------------------------------
       # ECR Login
       # --------------------------------------------------------
 
