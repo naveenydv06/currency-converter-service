@@ -121,7 +121,7 @@ jobs:
       AWS_REGION: "us-east-1"
       ECR_REPOSITORY: "currency-converter-app/currency-converter-repo"
       EKS_CLUSTER: "currency-converter-app"
-      K8S_NAMESPACE: "currency-converter-app"
+      K8S_NAMESPACE: "currency-converter"
 
     steps:
 
