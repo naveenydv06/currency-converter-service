@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: currency-converter
-  namespace: currency-converter
+  namespace: currency-converter-app
 spec:
   replicas: 2
   revisionHistoryLimit: 3

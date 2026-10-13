@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: currency-converter-config
-  namespace: currency-converter
+  namespace: currency-converter-app
 data:
   PORT: "3000"
   RATES_API_URL: "https://open.er-api.com/v6/latest/USD"
