@@ -168,7 +168,7 @@ jobs:
           kubectl apply -f kubernetes/ -n "$K8S_NAMESPACE"
 
           kubectl set image deployment/currency-converter \
-            "my-app=$IMAGE" \
+            "currency-converter=$IMAGE" \
             -n "$K8S_NAMESPACE"
 
           kubectl rollout status deployment/currency-converter \
