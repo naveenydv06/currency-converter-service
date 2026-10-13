@@ -3,13 +3,9 @@ name: CICD PIPELINE
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-
-  # ============================================================
-  # COMPILE / INSTALL DEPENDENCIES
-  # ============================================================
-
   compile:
     runs-on: ubuntu-latest
 
@@ -21,17 +17,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: src/package-lock.json
 
       - name: Install Dependencies
         working-directory: ./src
         run: npm ci
-
-
-  # ============================================================
-  # SECURITY & SYNTAX CHECK
-  # ============================================================
 
   security-syntax-check:
     runs-on: ubuntu-latest
@@ -50,10 +41,6 @@ jobs:
           node --check src/backend/server.js
           node --check src/frontend/app.js
 
-      # --------------------------------------------------------
-      # Trivy Installation
-      # --------------------------------------------------------
-
       - name: Trivy Installation
         run: |
           sudo apt-get update
@@ -69,10 +56,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      # --------------------------------------------------------
-      # Trivy Filesystem Scan
-      # --------------------------------------------------------
-
       - name: Trivy FS Scan
         run: |
           trivy fs \
@@ -80,18 +63,10 @@ jobs:
             -o fs-report.txt \
             .
 
-      # --------------------------------------------------------
-      # Gitleaks Installation
-      # --------------------------------------------------------
-
       - name: Gitleaks Installation
         run: |
           sudo apt-get update
           sudo apt-get install -y gitleaks
-
-      # --------------------------------------------------------
-      # Gitleaks Code Scan
-      # --------------------------------------------------------
 
       - name: Gitleaks Code Scan
         run: |
@@ -99,11 +74,6 @@ jobs:
             --source . \
             --report-path gitleaks-report.json \
             --report-format json
-
-
-  # ============================================================
-  # BUILD & DEPLOY TO EKS
-  # ============================================================
 
   build-and-deploy:
     name: Build & Deploy to EKS
@@ -124,56 +94,44 @@ jobs:
       K8S_NAMESPACE: "currency-converter-app"
 
     steps:
-
-      # --------------------------------------------------------
-      # Checkout
-      # --------------------------------------------------------
-
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+
       - name: Show OIDC subject
         shell: python
         run: |
           import os, json, base64, urllib.request
+
           url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
           url += ("&" if "?" in url else "?") + "audience=sts.amazonaws.com"
+
           req = urllib.request.Request(url, headers={
               "Authorization": "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
           })
+
           with urllib.request.urlopen(req) as response:
               token = json.load(response)["value"]
+
           payload = token.split(".")[1]
           claims = json.loads(base64.urlsafe_b64decode(
               payload + "=" * (-len(payload) % 4)
           ))
+
           print("SUBJECT:", claims["sub"])
-          
-      # --------------------------------------------------------
-      # AWS OIDC Authentication
-      # --------------------------------------------------------
 
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::410247952638:role/github-actions-eks-deploy
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
           audience: sts.amazonaws.com
 
       - name: Verify AWS authentication
         run: aws sts get-caller-identity
-      
-        # --------------------------------------------------------
-      # ECR Login
-      # --------------------------------------------------------
 
       - name: Login to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
-
-      # --------------------------------------------------------
-      # Docker Build & Push
-      # --------------------------------------------------------
 
       - name: Build, Tag, and Push Image
         id: build
@@ -181,23 +139,16 @@ jobs:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          set -euo pipefail
+
           docker build \
             -f src/backend/Dockerfile \
             -t "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
-<<<<<<< HEAD
-            
-=======
             ./src
->>>>>>> fb082d4048e4c8a52d5b4079045e976411e34060
 
-          docker push \
-            "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
           echo "image=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-
-      # --------------------------------------------------------
-      # Configure Kubernetes
-      # --------------------------------------------------------
 
       - name: Update kubeconfig
         run: |
@@ -205,10 +156,6 @@ jobs:
             --name "$EKS_CLUSTER" \
             --region "$AWS_REGION"
 
-      # --------------------------------------------------------
-      # Deploy to EKS
-      # --------------------------------------------------------
-      
       - name: Deploy to EKS
         env:
           IMAGE: ${{ steps.build.outputs.image }}
